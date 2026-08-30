@@ -16,12 +16,9 @@ A Docker runtime image for [Multica](https://github.com/multica-ai/multica): eac
 ## Quick start
 
 ```bash
-# 1. Build the image (once, and after every version bump)
-cd multica-opencode
-docker build -t multica-runtime:latest .
-
-# 2. Deploy from the example kit
-cd example
+# 1. Deploy from the example kit (pulls ghcr.io/z-mor/multica-opencode-runtime:latest by default;
+#    to build locally instead, see Build below)
+cd multica-opencode/example
 cp .env.example .env
 cp opencode.example.json opencode.json
 # set the minimum in .env: MULTICA_TOKEN and at least one *_API_KEY for opencode
@@ -126,20 +123,40 @@ The container's opencode config lives in `multica-opencode/example/opencode.json
 
 ## Build
 
-The build context is the `multica-opencode/` directory (Dockerfile and entrypoint live together there). The compose file in `example/` consumes the built image — it has no `build` section; set `MULTICA_RUNTIME_IMAGE` in `.env` to use a registry image instead. Versions are pinned with build arguments:
+The build context is the `multica-opencode/` directory (Dockerfile and entrypoint live together there). The compose file in `example/` consumes the prebuilt image from ghcr.io by default; set `MULTICA_RUNTIME_IMAGE` in `.env` to point it elsewhere (e.g. a locally built `multica-opencode-runtime:latest`). Versions are pinned with build arguments:
 
 ```bash
 cd multica-opencode
 docker build \
   --build-arg MULTICA_VERSION=0.4.36 \
   --build-arg OPENCODE_VERSION=1.18.25 \
-  -t multica-runtime:latest .
+  -t multica-opencode-runtime:latest .
 ```
 
 - multica CLI: `multica-cli-<ver>-linux-<arch>.tar.gz` from [releases](https://github.com/multica-ai/multica/releases)
 - opencode: `opencode-linux-<arch>.tar.gz` from [releases](https://github.com/anomalyco/opencode/releases) (native binary, Node.js is not required)
 
 `linux/amd64` and `linux/arm64` are supported.
+
+## CI & releases
+
+GitHub Actions (`.github/workflows/docker-publish.yml`) builds and publishes the image to **ghcr.io/z-mor/multica-opencode-runtime** — no secrets needed, it authenticates with the built-in `GITHUB_TOKEN`.
+
+| Event | Image tags |
+|---|---|
+| tag `vX.Y.Z-N` | `X.Y.Z-N` (exact), `X.Y.Z` (latest packaging of that multica version), `latest` |
+| push to `main` | `<multica>-edge` (mutable), `sha-<short>` |
+| pull request | build only (both platforms), no push |
+
+`X.Y.Z` is the multica CLI version pinned via `ARG MULTICA_VERSION` in the Dockerfile; `N` is the packaging revision. The workflow reads the version from the Dockerfile (single source of truth) and **fails the release if the tag references a different version** — bump the `ARG` first, then tag.
+
+To release:
+
+```bash
+git tag v0.4.36-1 && git push origin v0.4.36-1
+```
+
+The first successful push creates the package on ghcr.io; it is private by default — switch it to public once in the package settings on GitHub if you want it publicly pullable.
 
 ## Healthcheck
 
@@ -161,7 +178,7 @@ docker compose exec runtime curl -s 127.0.0.1:19514/health | jq .
 |---|---|
 | Container exits immediately | `docker compose logs runtime` — most often an invalid `MULTICA_TOKEN` |
 | `x509: certificate signed by unknown authority` | Self-signed cert on the server/git host — mount the CA and set `SSL_CERT_FILE` / `GIT_SSL_CAINFO` / `NODE_EXTRA_CA_CERTS` (see [Self-signed certificates](#self-signed-certificates)) |
-| `pull access denied for multica-runtime` | The image is not built/pulled yet — run the build step from Quick start first |
+| `pull access denied for ghcr.io/z-mor/multica-opencode-runtime` | No release tag pushed yet, or the ghcr.io package is still private — see [CI & releases](#ci--releases) |
 | `status: starting` never becomes `running` | Daemon logs: server unreachable, token expired, or opencode not found (it is definitely in the image; check `docker compose exec runtime opencode --version`) |
 | Tasks are not picked up | The agent in the web UI is based on a different CLI (OpenCode is required), or the issue is assigned to another user's agent |
 | `unhealthy` | `docker compose exec runtime curl -s 127.0.0.1:19514/health` — the `skipped_agents` field shows why a CLI was rejected |

@@ -6,7 +6,7 @@
 # exec the agent daemon in the foreground as PID 1 (via tini).
 set -euo pipefail
 
-log() { printf '[multica-runtime] %s\n' "$*" >&2; }
+log() { printf '[multica-opencode-runtime] %s\n' "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
 
 command -v multica  >/dev/null 2>&1 || die "multica CLI not found on PATH"

@@ -1,11 +1,11 @@
-name: multica-runtime
+name: multica-opencode-runtime
 
 services:
   runtime:
-    # Build the image first (see README -> Build):
-    #   cd multica-opencode && docker build -t multica-runtime:latest .
-    # Or point MULTICA_RUNTIME_IMAGE at a registry image.
-    image: ${MULTICA_RUNTIME_IMAGE:-multica-runtime:latest}
+    # Prebuilt image published by CI (see README -> Install from ghcr.io);
+    # override with MULTICA_RUNTIME_IMAGE or build locally (see README -> Build):
+    #   cd multica-opencode && docker build -t multica-opencode-runtime:latest .
+    image: ${MULTICA_RUNTIME_IMAGE:-ghcr.io/z-mor/multica-opencode-runtime:latest}
     env_file: .env
     restart: unless-stopped
     # Give the daemon time to deregister runtimes / finish in-flight tasks on stop
