@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "anthropic/claude-sonnet-4-5",
+  "provider": {
+    "custom-openai-compatible": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Custom LLM gateway",
+      "options": {
+        "baseURL": "https://llm.example.com/v1",
+        "apiKey": "{env:CUSTOM_LLM_API_KEY}"
+      },
+      "models": {
+        "my-model": {}
+      }
+    }
+  }
+}
