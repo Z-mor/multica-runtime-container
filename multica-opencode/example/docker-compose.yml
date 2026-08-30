@@ -18,6 +18,8 @@ services:
       - ./opencode.json:/home/agent/.config/opencode/opencode.json:ro
       # Git over SSH (optional): read-only key mount, picked up by entrypoint.sh
       # - ./secrets/id_ed25519:/home/agent/.ssh/id_ed25519:ro
+      # Custom CA for self-signed certificates (optional): see .env.example -> TLS
+      # - ./secrets/ca.crt:/certs/ca.crt:ro
     # Replicas for `docker compose up -d`; `--scale runtime=N` overrides this.
     deploy:
       replicas: ${MULTICA_RUNTIME_REPLICAS:-2}

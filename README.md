@@ -56,6 +56,21 @@ MULTICA_APP_URL=https://app.example.com
 
 If these variables are not set, the container connects to Multica Cloud.
 
+### Self-signed certificates
+
+If the self-hosted server (or the git host, or an LLM gateway) uses a self-signed certificate, keep verification on and trust your CA instead:
+
+1. Save the CA certificate to `example/secrets/ca.crt` and uncomment the `./secrets/ca.crt:/certs/ca.crt:ro` mount in `docker-compose.yml`.
+2. Set the variables you need in `.env` (see `.env.example` → TLS):
+
+| Variable | Consumer | Note |
+|---|---|---|
+| `SSL_CERT_FILE` | multica daemon (Go) | Replaces the system CA bundle — fine, the daemon only talks to your server |
+| `NODE_EXTRA_CA_CERTS` | opencode | Appends to the system bundle (LLM endpoints) |
+| `GIT_SSL_CAINFO` | git over HTTPS | Clone/push |
+
+If only the git host is self-signed, `GIT_SSL_CAINFO` alone is enough. Disabling verification instead (`git config http.sslVerify false`, `NODE_TLS_REJECT_UNAUTHORIZED=0`) works for git and opencode but is discouraged; the daemon has no insecure mode at all — a trusted CA is the only path there.
+
 ## Environment variables
 
 ### Required
@@ -83,8 +98,8 @@ If these variables are not set, the container connects to Multica Cloud.
 
 | Variable | Description |
 |---|---|
-| `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, `MISTRAL_API_KEY`, `XAI_API_KEY` | Provider keys; opencode picks up the standard env names automatically |
-| `MULTICA_OPENCODE_MODEL` | Model for opencode tasks, in `provider/model` format |
+| `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `DEEPSEEK_API_KEY`, `MISTRAL_API_KEY`, `XAI_API_KEY`, `ZHIPU_API_KEY`, `KIMI_API_KEY`, `MOONSHOT_API_KEY` | Provider keys; opencode picks up the standard env names automatically. `ZHIPU_API_KEY` covers both the Z.AI GLM Coding Plan and the regular Z.AI API; `KIMI_API_KEY` is the Kimi For Coding plan (`MOONSHOT_API_KEY` for pay-as-you-go Kimi models) |
+| `MULTICA_OPENCODE_MODEL` | Model for opencode tasks, in `provider/model` format (e.g. `anthropic/claude-sonnet-4-5`, `zai-coding-plan/glm-5.3`, `kimi-for-coding/kimi-for-coding`) |
 
 The container's opencode config lives in `multica-opencode/example/opencode.json` (created from `opencode.example.json`, which also shows an OpenAI-compatible gateway example using `{env:CUSTOM_LLM_API_KEY}`) and is mounted read-only into the image — the `OPENCODE_CONFIG` env baked into the image points at the mount target. Edit it to set model defaults, custom providers, permissions, etc. opencode is spawned per task and reads the config on startup, so edits apply to newly claimed tasks without rebuilding the image.
 
@@ -142,6 +157,7 @@ docker compose exec runtime curl -s 127.0.0.1:19514/health | jq .
 | Symptom | What to check |
 |---|---|
 | Container exits immediately | `docker compose logs runtime` — most often an invalid `MULTICA_TOKEN` |
+| `x509: certificate signed by unknown authority` | Self-signed cert on the server/git host — mount the CA and set `SSL_CERT_FILE` / `GIT_SSL_CAINFO` / `NODE_EXTRA_CA_CERTS` (see [Self-signed certificates](#self-signed-certificates)) |
 | `pull access denied for multica-runtime` | The image is not built/pulled yet — run the build step from Quick start first |
 | `status: starting` never becomes `running` | Daemon logs: server unreachable, token expired, or opencode not found (it is definitely in the image; check `docker compose exec runtime opencode --version`) |
 | Tasks are not picked up | The agent in the web UI is based on a different CLI (OpenCode is required), or the issue is assigned to another user's agent |
