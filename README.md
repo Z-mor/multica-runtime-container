@@ -92,7 +92,10 @@ If only the git host is self-signed, `GIT_SSL_CAINFO` alone is enough. Disabling
 |---|---|---|
 | `MULTICA_DAEMON_ID` | hostname (container ID) | Daemon ID on the server |
 | `MULTICA_DAEMON_DEVICE_NAME` | hostname | Human-readable device name |
+| `MULTICA_DEVICE_NAME_PREFIX` | — | Fleet naming: each replica registers as `PREFIX-<container suffix>` (e.g. `agent-05350488`); ignored when `MULTICA_DAEMON_DEVICE_NAME` is set |
 | `MULTICA_AGENT_RUNTIME_NAME` | `Docker runtime` | Runtime name (shown on the agent) |
+
+Use an explicit `MULTICA_DAEMON_DEVICE_NAME` for a single instance. For a fleet (`--scale runtime=N`) set only the prefix — every replica then gets a readable, collision-free name. Plain Compose cannot provide sequential per-replica numbers, so the suffix is the short container ID.
 
 ### opencode
 

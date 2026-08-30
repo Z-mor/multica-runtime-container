@@ -74,6 +74,15 @@ if [ -n "${ssh_key}" ]; then
     log "git SSH configured (key: ${ssh_key})"
 fi
 
+# --- 4c. Per-replica display name (optional) ---------------------------------
+# Fleet naming: every replica registers as PREFIX-<container suffix>.
+# An explicitly set MULTICA_DAEMON_DEVICE_NAME always wins over the prefix.
+if [ -n "${MULTICA_DEVICE_NAME_PREFIX:-}" ] && [ -z "${MULTICA_DAEMON_DEVICE_NAME:-}" ]; then
+    suffix="${HOSTNAME:-$(hostname)}"
+    export MULTICA_DAEMON_DEVICE_NAME="${MULTICA_DEVICE_NAME_PREFIX}-${suffix:0:8}"
+    log "device name: ${MULTICA_DAEMON_DEVICE_NAME}"
+fi
+
 # --- 5. Daemon (foreground; tini forwards signals, reaps agent children) -----
 log "starting multica daemon in foreground (daemon id: ${MULTICA_DAEMON_ID:-$(hostname)})"
 exec multica daemon start --foreground
