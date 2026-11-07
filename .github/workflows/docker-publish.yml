@@ -1,13 +1,18 @@
-# Build and publish the runtime image to ghcr.io.
+# Build and publish the runtime images to ghcr.io.
 #
-# Tag scheme (image = ghcr.io/z-mor/multica-opencode-runtime):
+# One matrix entry per runtime image (multica daemon + bundled agent CLI):
+#   multica-opencode -> ghcr.io/z-mor/multica-opencode-runtime
+#   multica-pi       -> ghcr.io/z-mor/multica-pi-runtime
+# Each image is built and published independently with its own tag set.
+#
+# Tag scheme (per image):
 #   push tag vX.Y.Z-N  -> X.Y.Z-N (exact), X.Y.Z (latest packaging for that
 #                         multica version), latest
 #   push to main       -> <multica>-edge (mutable), sha-<short>
 #   pull request       -> build only, no push
 #
-# X.Y.Z is the multica CLI version pinned via ARG in multica-opencode/Dockerfile;
-# N is the packaging revision. The workflow reads the version from the Dockerfile
+# X.Y.Z is the multica CLI version pinned via ARG in <matrix.context>/Dockerfile;
+# N is the packaging revision. Each job reads the version from its Dockerfile
 # (single source of truth) and fails if a release tag references a different one.
 
 name: docker-publish
@@ -21,7 +26,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: z-mor/multica-opencode-runtime
 
 permissions:
   contents: read
@@ -30,6 +34,14 @@ permissions:
 jobs:
   build-push:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - context: multica-opencode
+            image: multica-opencode-runtime
+          - context: multica-pi
+            image: multica-pi-runtime
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,7 +49,7 @@ jobs:
       - name: Extract pinned MULTICA_VERSION from Dockerfile
         id: versions
         run: |
-          multica_version="$(grep -oP '^ARG MULTICA_VERSION=\K.*' multica-opencode/Dockerfile)"
+          multica_version="$(grep -oP '^ARG MULTICA_VERSION=\K.*' "${{ matrix.context }}/Dockerfile")"
           echo "multica=${multica_version}" >> "$GITHUB_OUTPUT"
 
       - name: Validate release tag matches Dockerfile pin
@@ -46,7 +58,7 @@ jobs:
           tag="${GITHUB_REF_NAME#v}"           # vX.Y.Z-N -> X.Y.Z-N
           multica_part="${tag%-*}"             # X.Y.Z
           if [ "$multica_part" != "${{ steps.versions.outputs.multica }}" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} references multica ${multica_part}, but the Dockerfile pins ${{ steps.versions.outputs.multica }}. Bump ARG MULTICA_VERSION first."
+            echo "::error::Tag ${GITHUB_REF_NAME} references multica ${multica_part}, but ${{ matrix.context }}/Dockerfile pins ${{ steps.versions.outputs.multica }}. Bump ARG MULTICA_VERSION first."
             exit 1
           fi
 
@@ -68,7 +80,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/z-mor/${{ matrix.image }}
           tags: |
             type=raw,value=${{ steps.versions.outputs.multica }}-edge,enable={{is_default_branch}}
             type=sha,format=short,enable={{is_default_branch}}
@@ -79,7 +91,7 @@ jobs:
       - name: Build (and push off PRs)
         uses: docker/build-push-action@v6
         with:
-          context: multica-opencode
+          context: ${{ matrix.context }}
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
