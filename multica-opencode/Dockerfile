@@ -8,8 +8,8 @@
 #   MULTICA_VERSION  — multica CLI release, https://github.com/multica-ai/multica/releases
 #   OPENCODE_VERSION — opencode release, https://github.com/anomalyco/opencode/releases
 
-ARG MULTICA_VERSION=0.4.36
-ARG OPENCODE_VERSION=1.18.25
+ARG MULTICA_VERSION=0.8.1
+ARG OPENCODE_VERSION=1.19.5
 
 FROM debian:bookworm-slim
 
@@ -72,7 +72,8 @@ WORKDIR /home/agent
 RUN git lfs install
 
 ENV MULTICA_WORKSPACES_ROOT=/data/workspaces \
-    MULTICA_DAEMON_AUTO_RELOAD=0 \
+    MULTICA_DAEMON_AUTO_RELOAD=false \
+    MULTICA_DAEMON_AUTO_UPDATE=false \
     MULTICA_AGENT_RUNTIME_NAME="Docker runtime" \
     OPENCODE_DISABLE_AUTOUPDATE=true \
     OPENCODE_CONFIG=/home/agent/.config/opencode/opencode.json

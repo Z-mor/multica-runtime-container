@@ -29,9 +29,10 @@ fi
 log "authenticating with personal access token"
 multica login --token "${MULTICA_TOKEN}"
 
-# The image is immutable: forbid the daemon from restarting into a self-updated
-# binary. Belt and suspenders next to MULTICA_DAEMON_AUTO_RELOAD=0.
-multica config set disable_auto_reload true >/dev/null 2>&1 || true
+# The image is immutable: forbid the daemon from self-updating or restarting
+# into a new binary. Belt and suspenders next to the MULTICA_DAEMON_* env vars.
+multica config set disable_auto_reload true  >/dev/null 2>&1 || true
+multica config set disable_auto_update true >/dev/null 2>&1 || true
 
 # --- 3. Git identity for agent commits ---------------------------------------
 if [ -n "${GIT_USER_NAME:-}" ]; then
