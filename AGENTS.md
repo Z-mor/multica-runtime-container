@@ -26,6 +26,7 @@ The repo root holds documentation only. Both images are also meant to be usable 
 | `multica-pi/entrypoint.sh` | Startup flow identical to the opencode flavor (log tag `[multica-pi-runtime]`, checks `pi` on PATH) |
 | `multica-pi/example/docker-compose.yml` | Deployment kit for the pi image (default `ghcr.io/z-mor/multica-pi-runtime:latest`); commented `./pi-agent` ~/.pi/agent mount, no opencode.json equivalent |
 | `multica-pi/example/.env.example` | Env vars for the pi flavor (pi provider keys, `MULTICA_PI_MODEL`) |
+| `multica-pi/example/pi-agent.example/` | Templates for the optional `~/.pi/agent` mount (`mcp.json`, `settings.json`, `models.json`, `AGENTS.md`); operators copy to `pi-agent/` next to the compose file (gitignored) |
 | `.github/workflows/docker-publish.yml` | CI: matrix over both kits, multi-arch build + publish to ghcr.io (see CI invariants below) |
 
 ## Build & verification
@@ -69,6 +70,7 @@ The Dockerfile `RUN` steps fail the build if the pinned binaries do not download
 - **Two unrelated `opencode.json` files.** The repo-root one configures opencode sessions working on this repo; `multica-opencode/example/opencode.json` is the container's runtime config (operator-created, mounted `:ro` to the image's `OPENCODE_CONFIG` path, re-read by every task-spawned opencode process) — never mix them up.
 - Agent auth is env-based in both flavors: standard `*_API_KEY` names are auto-detected (opencode: incl. `ZHIPU_API_KEY`; pi: incl. `ZAI_API_KEY`/`ZAI_CODING_CN_API_KEY` instead — the Z.AI key names differ between the agents). Custom opencode providers go through `example/opencode.json`; pi customization goes through `~/.pi/agent` (optional `./pi-agent` mount, writable) — do not bake credentials into an image.
 - The multica daemon detects agent CLIs on PATH and invokes pi in headless JSON mode (`pi -p --mode json`); per-agent model overrides exist as env vars (`MULTICA_OPENCODE_MODEL`, `MULTICA_PI_MODEL`) — keep them documented in the matching `.env.example`.
+- The optional pi `~/.pi/agent` mount must be writable (pi appends `mcp.log` and saves MCP exposure changes there — never `:ro`). A local `mcp.json` entry overrides a multica-managed MCP server with the same name. OAuth sign-in (`/mcp login`, `/login`) is interactive and unavailable in the container — HTTP MCP authenticates via `headers` with `${ENV_VAR}`, LLM providers via env keys; stdio MCP servers need their runtime (nodejs/python) baked into a derived image. Never set `selfUpdateCommand` or add update sources in settings (immutability).
 - SSH keys are mounted read-only; the entrypoint copies the key to `~/.ssh/container_key` before `chmod 600` (ssh refuses permissive keys). Never chmod the mount itself.
 
 ## Conventions

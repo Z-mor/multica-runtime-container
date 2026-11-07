@@ -134,7 +134,33 @@ The container's opencode config lives in `multica-opencode/example/opencode.json
 
 **Version compatibility**: multica 0.8.1 has no hard minimum or maximum pi version, but two capability floors apply — pi **≥ 1.4.0** enables the RPC mode used for in-flight task supplements/steering, and pi **≥ 0.99.0** enables managed MCP delivery. Older versions still register and run tasks, but silently lose those features — keep `PI_VERSION` at or above 1.4.0.
 
-Provider keys are all the pi image needs — no config file is required. For deeper customization (default model, custom providers, skills, extensions) pi reads `settings.json` / `models.json` from `~/.pi/agent`; mount your own directory via the commented `./pi-agent:/home/agent/.pi/agent` volume in `multica-pi/example/docker-compose.yml` (writable, not `:ro`).
+Provider keys are all the pi image needs — no config file is required. For deeper customization pi reads configuration from `~/.pi/agent`; see below.
+
+#### Configuring pi beyond provider keys
+
+Copy the templates and enable the (already provided, commented) volume in `multica-pi/example/docker-compose.yml`. The mount must be **writable** — pi appends `mcp.log` and saves exposure changes next to its config:
+
+```bash
+cd multica-pi/example
+cp -r pi-agent.example pi-agent
+# then uncomment the ./pi-agent:/home/agent/.pi/agent volume in docker-compose.yml
+```
+
+| File | Purpose |
+|---|---|
+| `mcp.json` | MCP servers available to every task (see the MCP notes below) |
+| `settings.json` | Defaults: model/thinking level, `defaultTools`, proxy (`httpProxy`), retries; install telemetry off (second line next to `PI_TELEMETRY=0`) |
+| `models.json` | Custom OpenAI/Anthropic-compatible endpoints — the same role the custom-provider example plays in the opencode kit; `apiKey` supports `${ENV_VAR}` interpolation |
+| `AGENTS.md` | Global instructions applied to every task on top of the per-task instructions Multica writes into the workspace |
+| `extensions/`, `skills/`, `prompts/` | pi extensions, skills and prompt templates dropped into the same directory |
+
+**MCP — two complementary paths:**
+
+- *Local `mcp.json`* (this mount): servers every task on this runtime can use, e.g. internal tooling. HTTP servers work out of the box — authenticate via `headers` with `${ENV_VAR}` interpolation (OAuth sign-in is interactive and unavailable in a container). stdio servers spawn a local process and need their runtime (nodejs/python) — add it in a [derived image](#using-an-image-as-a-base).
+- *Multica-managed MCP*: configured per agent on the server (**Settings → Agents**); the daemon delivers it into each task automatically (requires pi ≥ 0.99.0, satisfied by the image's pin). Nothing to mount.
+- On a name conflict the local `mcp.json` entry wins over the server-managed one.
+
+Secrets referenced from these files (`${DOCS_MCP_TOKEN}`, `${CUSTOM_LLM_API_KEY}`, …) come from `.env` — they are passed through to task-spawned pi processes like provider keys.
 
 ### Git
 

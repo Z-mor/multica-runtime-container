@@ -13,9 +13,11 @@ services:
     volumes:
       # Per-task worktrees + shared repo cache (avoids re-cloning on restart)
       - workspaces:/data/workspaces
-      # pi agent directory (optional): settings.json / models.json / skills /
-      # extensions. Provider keys from .env are usually enough — no config
-      # files needed by default. Must be writable (no :ro).
+      # pi agent directory (optional): copy the templates first
+      #   cp -r pi-agent.example pi-agent
+      # and edit settings.json / models.json / mcp.json / AGENTS.md — they
+      # apply to every task (README -> Configuring pi). Must be writable
+      # (no :ro). Provider keys from .env are enough without it.
       # - ./pi-agent:/home/agent/.pi/agent
       # Git over SSH (optional): read-only key mount, picked up by entrypoint.sh
       # - ./secrets/id_ed25519:/home/agent/.ssh/id_ed25519:ro

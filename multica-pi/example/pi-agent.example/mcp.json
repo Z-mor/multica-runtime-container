@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "internal-docs": {
+      "url": "https://docs.example.com/mcp",
+      "headers": { "Authorization": "Bearer ${DOCS_MCP_TOKEN}" },
+      "description": "Search and read the internal product documentation"
+    },
+    "toolhub": {
+      "command": "npx",
+      "args": ["-y", "internal-tools-mcp", "--stdio"],
+      "env": { "TOOLHUB_TOKEN": "${TOOLHUB_TOKEN}" },
+      "description": "Internal tool hub (stdio; needs nodejs in the image)"
+    }
+  }
+}
